@@ -14,10 +14,6 @@ buildtool="cowbuilder"
 backports_dir="debian/backports"
 patches_dir="$backports_dir"
 
-if [ -f "$HOME"/.dbackports.conf ]; then
-    . "$HOME"/.dbackports.conf
-fi
-
 BPO_T="X-Backports-Target"
 
 if [ ! -f "debian/control" ]; then
@@ -37,6 +33,10 @@ fi
 basepath="/var/cache/pbuilder/$distribution.cow"
 basetgz="/var/cache/pbuilder/$distribution.tgz"
 
+
+if [ -f "$HOME"/.dbackports.conf ]; then
+    . "$HOME"/.dbackports.conf
+fi
 
 # probably there is more efficient way, but it works
 if [ ! $USER = root ]; then
