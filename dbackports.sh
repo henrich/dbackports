@@ -66,7 +66,7 @@ if [ $buildtool = cowbuilder -a -x /usr/sbin/$buildtool ]; then
 elif [ $buildtool = pbuilder -a -x /usr/sbin/$buildtool ]; then
     chroot_setting="--basetgz $basetgz --mirror $mirror --distribution $distribution"
 else
-    echo "set approriate buildtool (not $buildtool), aborting..."
+    echo "set approriate buildtool (instead of $buildtool), aborting..."
     exit 1
 fi
 
