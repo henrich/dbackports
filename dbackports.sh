@@ -59,9 +59,9 @@ export QUILT_SERIES="$PWD/$backports_dir/series"
 export QUILT_PATCHES="$backports_dir"
 
 # exclude certain files for quilt
-common_exclude="find debian -type f -a  ! -path debian/changelog \
-	                    -o -path debian/patches -prune -a ! -type d \
-	                    -o -path debian/backports -prune -a ! -type d" 
+common_exclude="-type f -a  ! -path debian/changelog \
+	        -o -path debian/patches -prune -a ! -type d \
+	        -o -path debian/backports -prune -a ! -type d" 
 
 # Now we can set environment variables for chroot...
 if [ $buildtool = cowbuilder -a -x /usr/sbin/$buildtool ]; then
