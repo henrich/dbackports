@@ -9,9 +9,20 @@
 #       now it's pbuilder specific setting, some people want to use cowbuilder instead.
 #       
 # Depends: cowbuilder|pbuilder, devscripts, quilt
-#
+# Recommends: sudo
 
 set -e
+
+buildtool="cowbuilder"
+basepath="/var/cache/pbuilder/$distribution.cow"
+basetgz="/var/cache/pbuilder/$distribution.tgz"
+
+backports_dir="debian/backports"
+patches_dir="$backports_dir"
+
+if [ -f "$HOME"/.dbackports.conf ]; then
+    . "$HOME"/.dbackports.conf
+fi
 
 BPO_T="X-Backports-Target"
 
@@ -24,19 +35,14 @@ else
     distribution=`echo $backports_target | cut -d' ' -f2`
 fi
 
-# specify cowbuilder by defauilt (not yet work, however)
-if [ ! -f "$HOME"/.dbackports.conf ]; then
-    buildtool="cowbuilder"
-    basepath="/var/cache/pbuilder/$distribution.cow"
-    basetgz="/var/cache/pbuilder/$distribution.tgz"
+if [ -z "$distribution" ]; then
+    echo "set approriate $BPO_T (now $distribution) in debian/control, aborting..."
+    exit 1
+fi
 
-    backports_dir="debian/backports"
-    patches_dir="$backports_dir"
-    common_exclude="find debian -type f -a  ! -path debian/changelog \
-	                        -o -path debian/patches -prune -a ! -type d \
-	                        -o -path debian/backports -prune -a ! -type d" 
-else
-    . "$HOME"/.dbackports.conf
+# probably there is more efficient way, but it works
+if [ ! $USER = root ]; then
+    sudo=sudo
 fi
 
 if [ ! -z "$MIRRORSITE" ]; then
@@ -51,27 +57,29 @@ export QUILTRC
 export QUILT_SERIES="$PWD/$backports_dir/series"
 export QUILT_PATCHES="$backports_dir"
 
+# exclude certain files for quilt
+common_exclude="find debian -type f -a  ! -path debian/changelog \
+	                    -o -path debian/patches -prune -a ! -type d \
+	                    -o -path debian/backports -prune -a ! -type d" 
 
 # Now we can set environment variables for chroot...
-
 if [ $buildtool = cowbuilder ]; then
     chroot_setting="--basepath $basepath --mirror $mirror --distribution $distribution"
-else
+elif [ $buildtool = pbuilder ]; then
     chroot_setting="--basetgz $basetgz --mirror $mirror --distribution $distribution"
+else
+    echo "set approriate buildtool (not $buildtool), aborting..."
+    exit 1
 fi
 
 case "$1" in
   init)
-    if [ ! -f "$basetgz" -a -z "$distribution" ]; then
-        echo "set approriate $BPO_T in debian/control, aborting..."
-        exit 1
-    elif [ ! -f "$basetgz" ]; then
-        echo "Initialize stable pbuilder environment."
-        sudo pbuilder --create $chroot_setting
-    else
-        echo " "
-        echo "basetgz already exists in $basetgz, use it."
-        echo " "
+    if [ $buildtool = cowbuilder -a ! -f "$basepath"]; then
+	echo "Initialize stable $buildtool environment."
+	$sudo $buildtool --create $chroot_setting    
+    elif [ $buildtool = pbuilder -a ! -f "$basetgz" ]; then
+	echo "Initialize stable $buildtool environment."
+	$sudo $buildtool --create $chroot_setting    
     fi
 
 # dch only support Debian stable backports?
@@ -85,10 +93,9 @@ case "$1" in
             mv .pc $backports_dir/orig.pc
         fi
           quilt new $distribution > /dev/null && \
-#          quilt add -P "$distribution" "`find debian $common_exclude -a ! -name *changelog*`" 2>&1 >/dev/null && \
-          for file in `find debian $common_exclude`
+          for file in `find debian $common_exclude` 
           do
-            quilt add -P "$distribution" $file 
+            quilt add -P "$distribution" $file 2>&1 >/dev/null
           done && \
         date +%s > $backports_dir/timestamp && \
         echo "Ready."
@@ -101,7 +108,7 @@ case "$1" in
   ;;
 
   up|update)
-    update_files=`find debian $common_exclude -a ! -name *changelog* -a -newer $backports_dir/timestamp`
+    update_files=`find debian $common_exclude -a -newer $backports_dir/timestamp`
 
     if [ ! -z "$update_files" ]; then
          quilt add -P "$distribution" "$update_files" && date +%s > $backports_dir/timestamp
@@ -138,8 +145,8 @@ case "$1" in
     echo ""
 
     if [ $2 !="--noch-up" ]; then
-      echo "Then, update stable pbuilder environment..."
-      sudo pbuilder --update $chroot_setting
+      echo "Then, update stable chroot environment..."
+      $sudo $buildtool --update $chroot_setting
     fi
   ;;
 
