@@ -14,9 +14,6 @@
 set -e
 
 buildtool="cowbuilder"
-basepath="/var/cache/pbuilder/$distribution.cow"
-basetgz="/var/cache/pbuilder/$distribution.tgz"
-
 backports_dir="debian/backports"
 patches_dir="$backports_dir"
 
@@ -39,6 +36,10 @@ if [ -z "$distribution" ]; then
     echo "set approriate $BPO_T (now $distribution) in debian/control, aborting..."
     exit 1
 fi
+
+basepath="/var/cache/pbuilder/$distribution.cow"
+basetgz="/var/cache/pbuilder/$distribution.tgz"
+
 
 # probably there is more efficient way, but it works
 if [ ! $USER = root ]; then
@@ -63,9 +64,9 @@ common_exclude="find debian -type f -a  ! -path debian/changelog \
 	                    -o -path debian/backports -prune -a ! -type d" 
 
 # Now we can set environment variables for chroot...
-if [ $buildtool = cowbuilder ]; then
+if [ $buildtool = cowbuilder -a -x /usr/sbin/$buildtool ]; then
     chroot_setting="--basepath $basepath --mirror $mirror --distribution $distribution"
-elif [ $buildtool = pbuilder ]; then
+elif [ $buildtool = pbuilder -a -x /usr/sbin/$buildtool ]; then
     chroot_setting="--basetgz $basetgz --mirror $mirror --distribution $distribution"
 else
     echo "set approriate buildtool (not $buildtool), aborting..."
@@ -74,7 +75,7 @@ fi
 
 case "$1" in
   init)
-    if [ $buildtool = cowbuilder -a ! -f "$basepath"]; then
+    if [ $buildtool = cowbuilder -a ! -f "$basepath" ]; then
 	echo "Initialize stable $buildtool environment."
 	$sudo $buildtool --create $chroot_setting    
     elif [ $buildtool = pbuilder -a ! -f "$basetgz" ]; then
