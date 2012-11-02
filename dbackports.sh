@@ -26,9 +26,9 @@ if [ ! -f "$HOME"/.dbackports.conf ]; then
     basetgz="/var/cache/pbuilder/$distribution.tgz"
     backports_dir="debian/backports"
     patches_dir="$backports_dir"
-    common_exclude="find debian -type f -o -path debian/patches -prune -a ! -type d \
-	                        -o -path debian/backports -prune -a ! -type d \
-				-o -name changelog"
+    common_exclude="find debian -type f -a  ! -path debian/changelog \
+	                        -o -path debian/patches -prune -a ! -type d \
+	                        -o -path debian/backports -prune -a ! -type d" 
 else
     . "$HOME"/.dbackports.conf
 fi
