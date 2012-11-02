@@ -72,7 +72,7 @@ fi
 
 case "$1" in
   init)
-    if [ $buildtool = cowbuilder -a ! -f "$basepath" ]; then
+    if [ $buildtool = cowbuilder -a ! -d "$basepath" ]; then
 	echo "Initialize stable $buildtool environment."
 	$sudo $buildtool --create $chroot_setting    
     elif [ $buildtool = pbuilder -a ! -f "$basetgz" ]; then
@@ -83,7 +83,8 @@ case "$1" in
 # dch only support Debian stable backports?
     if [ ! -d "$backports_dir" ]; then
         mkdir $backports_dir && \
-        find debian $common_exclude | cpio -pdV --quiet $backports_dir && \
+        find debian $common_exclude | cpio -pdV --quiet $backports_dir && 
+            echo debian/changelog | cpio -pdV --quiet $backports_dir &&\
             mv $backports_dir/debian/changelog $backports_dir/changelog && \
             dch --bpo --changelog $backports_dir/changelog \
               -m "For detail of changes, see $backports_dir/$distribution"
@@ -106,52 +107,60 @@ case "$1" in
   ;;
 
   up|update)
-    update_files=`find debian $common_exclude -a -newer $backports_dir/timestamp`
-
-    if [ ! -z "$update_files" ]; then
-         quilt add -P "$distribution" "$update_files" && date +%s > $backports_dir/timestamp
-    else
-        echo "No changes are applied yet."
-        exit 1
-    fi
-
-    quilt refresh 2>&1 >/dev/null && rm -r .pc/$distribution
-
-    if [ -e $backports_dir/debian ]; then
-        rm -rf $backports_dir/debian
-    fi
-
+    update_files=`find debian -newer $backports_dir/timestamp $common_exclude`
+    for update_file in $update_files
+    do
+        if [ ! -f $backports_dir/$update_file ]; then
+             quilt add -P "$distribution" $update_file
+        fi
+    done
+    quilt refresh 2>&1 >/dev/null 
 
     get_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2`
-
     (echo "$get_version" | grep "bpo" &&  \
       dch -i --changelog $backports_dir/changelog  -m "update backports.") || \
       dch -e --changelog $backports_dir/changelog -D "$distribution"-backports \
         -m "For detail of changes, see debian/backports/$distribution"
 
-    package_name=`dpkg-parsechangelog -l$backports_dir/changelog|grep ^Source |cut -d' ' -f2`
-
-    cp -ap "debian/changelog" "debian/changelog_backports" && \
+    cp -ap "debian/changelog" "debian/changelog_original" && \
     cp -ap "$backports_dir/changelog" "debian/changelog" && \
-    bpo_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2 | grep bpo`
+    dpkg-buildpackage -S -us -uc > /dev/null
 
-    dpkg-buildpackage -S -us -uc &&
-    cp -ap "debian/changelog_backports" "debian/changelog"
-
-    echo "Now here's a backports patch in $backports_dir/$distribution and its source."
     echo " "
-    echo "Ready to build."
+    echo "Now here's a backports patch in $backports_dir/$distribution and its source."
+    echo "Ready to build (or "dbackports back")."
+    echo " "
+  ;;
 
-    if [ $2 = auto ]; then
-        $buildtool --update && $buildtool --build ../"$package_name"_"$bpo_version".dsc
-    else
-        echo "Please update stable chroot environment by $buildtool update and \
-	build package with $buildtool --build ../"$package_name"_"$bpo_version".dsc"
+  back)
+    if [ -f debian/changelog_original ]; then
+        cp -ap debian/changelog_original debian/changelog && rm debian/changelog_original
+    fi
+
+    if [ -d "$backports_dir/orig.pc" ]; then
+        rm -rf .pc && \
+        cp -arp $backports_dir/orig.pc .pc && rm -r "$backports_dir/orig.pc"
+    fi
+
+    if [ -d $backports_dir ]; then
+        rm -rf $backports_dir
     fi
   ;;
 
+  build)
+    package_name=`dpkg-parsechangelog -l$backports_dir/changelog|grep ^Source |cut -d' ' -f2`
+    bpo_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2 | grep bpo`
+
+# it woundn't work...
+    if [ "$bpo_version" = 1:* ]; then
+        bpo_version =`echo $bpo_version | cut -d':' -f2`
+    fi
+
+    $sudo $buildtool --build ../"$package_name"_"$bpo_version".dsc $chroot_setting
+  ;;
+
   *)
-    echo "please specify option as 'init' or 'update'."
+    echo "please specify option."
   ;;
 
 esac
