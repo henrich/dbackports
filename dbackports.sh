@@ -7,12 +7,15 @@
 #
 # Depends: cowbuilder|pbuilder, devscripts, quilt
 # Recommends: sudo
+#
+# Todo: use git for temporary file handling
+#
 
 set -e
 
 usage()
 {
-        echo  "Usage: dbackports [init|update|back|build]"
+        echo  "Usage: dbackports [init|update|build|rollback]"
 }
 
 
@@ -138,7 +141,7 @@ case "$1" in
     echo " "
   ;;
 
-  back)
+  rollback)
     if [ -f debian/changelog_original ]; then
         cp -ap debian/changelog_original debian/changelog && rm debian/changelog_original
     fi
@@ -158,7 +161,7 @@ case "$1" in
     bpo_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2 | grep bpo`
 
 # it woundn't work...
-    if [ "$bpo_version" = 1:* ]; then
+    if [ "$bpo_version" = \d+:* ]; then
         bpo_version =`echo $bpo_version | cut -d':' -f2`
     fi
 
