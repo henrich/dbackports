@@ -22,19 +22,13 @@ else
     distribution=`echo $backports_target | cut -d' ' -f2`
 fi
 
-# Check and use pbuilder environment variables, then overwrite it with
-# "$HOME"/.dbackports.conf. If it does not exist, use default variables.
-if [ -f "$HOME"/.pbuilderrc ]; then
-    . "$HOME"/.pbuilderrc
-else
-    . /etc/pbuilderrc
-fi
-
 if [ ! -f "$HOME"/.dbackports.conf ]; then
     basetgz="/var/cache/pbuilder/$distribution.tgz"
     backports_dir="debian/backports"
     patches_dir="$backports_dir"
-    common_exclude="! -type d -o -path debian/backports -prune -o -path debian/patches -prune -a ! -name *patches -a ! -name *backports"
+    common_exclude="find debian -type f -o -path debian/patches -prune -a ! -type d \
+	                        -o -path debian/backports -prune -a ! -type d \
+				-o -name changelog"
 else
     . "$HOME"/.dbackports.conf
 fi
@@ -45,7 +39,7 @@ else
     mirror="http://ftp.debian.org/debian"
 fi
 
-# don't read user's .quiltrc file, ...
+# don't read user's .quiltrc file...
 QUILTRC="dont_read_it"
 export QUILTRC
 export QUILT_SERIES="$PWD/$backports_dir/series"
@@ -132,6 +126,7 @@ case "$1" in
     echo "package as ../"$package_name"_"$bpo_version".dsc."
     echo ""
 
+# for test, not update chroot environment...
 exit 0
     if [ $2 !="--noch-up" ]; then
       echo "Then, update stable pbuilder environment..."
