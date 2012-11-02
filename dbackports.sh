@@ -8,6 +8,8 @@
 # Todo: able to use cowbuilder, too.
 #       now it's pbuilder specific setting, some people want to use cowbuilder instead.
 #       
+# Depends: cowbuilder|pbuilder, devscripts, quilt
+#
 
 set -e
 
@@ -22,8 +24,12 @@ else
     distribution=`echo $backports_target | cut -d' ' -f2`
 fi
 
+# specify cowbuilder by defauilt (not yet work, however)
 if [ ! -f "$HOME"/.dbackports.conf ]; then
+    buildtool="cowbuilder"
+    basepath="/var/cache/pbuilder/$distribution.cow"
     basetgz="/var/cache/pbuilder/$distribution.tgz"
+
     backports_dir="debian/backports"
     patches_dir="$backports_dir"
     common_exclude="find debian -type f -a  ! -path debian/changelog \
@@ -47,7 +53,12 @@ export QUILT_PATCHES="$backports_dir"
 
 
 # Now we can set environment variables for chroot...
-chroot_setting="--basetgz $basetgz --mirror $mirror --distribution $distribution"
+
+if [ $buildtool = cowbuilder ]; then
+    chroot_setting="--basepath $basepath --mirror $mirror --distribution $distribution"
+else
+    chroot_setting="--basetgz $basetgz --mirror $mirror --distribution $distribution"
+fi
 
 case "$1" in
   init)
@@ -126,8 +137,6 @@ case "$1" in
     echo "package as ../"$package_name"_"$bpo_version".dsc."
     echo ""
 
-# for test, not update chroot environment...
-exit 0
     if [ $2 !="--noch-up" ]; then
       echo "Then, update stable pbuilder environment..."
       sudo pbuilder --update $chroot_setting
