@@ -5,9 +5,6 @@
 # Copyright: 2012, Hideki Yamane <henrich@debian.or.jp/org>
 # This program is distributed under GPL-2.0+, see http://spdx.org/licenses/GPL-2.0+
 #
-# Todo: able to use cowbuilder, too.
-#       now it's pbuilder specific setting, some people want to use cowbuilder instead.
-#       
 # Depends: cowbuilder|pbuilder, devscripts, quilt
 # Recommends: sudo
 
@@ -141,13 +138,15 @@ case "$1" in
     dpkg-buildpackage -S -us -uc &&
     cp -ap "debian/changelog_backports" "debian/changelog"
 
-    echo "Now here's a backports patch in $backports_dir/$distribution and its source"
-    echo "package as ../"$package_name"_"$bpo_version".dsc."
-    echo ""
+    echo "Now here's a backports patch in $backports_dir/$distribution and its source."
+    echo " "
+    echo "Ready to build."
 
-    if [ $2 !="--noch-up" ]; then
-      echo "Then, update stable chroot environment..."
-      $sudo $buildtool --update $chroot_setting
+    if [ $2 = auto ]; then
+        $buildtool --update && $buildtool --build ../"$package_name"_"$bpo_version".dsc
+    else
+        echo "Please update stable chroot environment by $buildtool update and \
+	build package with $buildtool --build ../"$package_name"_"$bpo_version".dsc"
     fi
   ;;
 
