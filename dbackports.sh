@@ -10,6 +10,12 @@
 
 set -e
 
+usage()
+{
+        echo  "Usage: dbackports [init|update|back|build]"
+}
+
+
 buildtool="cowbuilder"
 backports_dir="debian/backports"
 patches_dir="$backports_dir"
@@ -161,6 +167,7 @@ case "$1" in
 
   *)
     echo "please specify option."
+    usage
   ;;
 
 esac
