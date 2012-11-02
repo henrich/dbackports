@@ -36,7 +36,7 @@ fi
 if [ ! -z "$MIRRORSITE" ]; then
     mirror="$MIRRORSITE"
 else
-    mirror="http://ftp.debian.org/debian"
+    mirror="http://cdn.debian.net/debian"
 fi
 
 # don't read user's .quiltrc file...
