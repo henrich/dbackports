@@ -137,7 +137,7 @@ case "$1" in
 
     echo " "
     echo "Now here's a backports patch in $backports_dir/$distribution and its source."
-    echo "Ready to build (or "dbackports back")."
+    echo "Ready to build (or "dbackports rollback")."
     echo " "
   ;;
 
