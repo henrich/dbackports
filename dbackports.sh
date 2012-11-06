@@ -158,12 +158,8 @@ case "$1" in
 
   build)
     package_name=`dpkg-parsechangelog -l$backports_dir/changelog|grep ^Source |cut -d' ' -f2`
-    bpo_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2 | grep bpo`
-
-# it woundn't work...
-    if [ "$bpo_version" = \d+:* ]; then
-        bpo_version =`echo $bpo_version | cut -d':' -f2`
-    fi
+    epoch_bpo_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2 | grep bpo`
+    bpo_version="${epoch_bpo_version#*:}"
 
     $sudo $buildtool --build ../"$package_name"_"$bpo_version".dsc $chroot_setting
   ;;
