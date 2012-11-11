@@ -9,7 +9,10 @@
 # Recommends: sudo
 #
 # Todo: use git for temporary file handling
-#
+# issue: can I remove root priv for cowbuilder/pbuilder via fakeroot?
+#        debian/backports/debian directory is ugly.
+# issue: sometimes cowbuilder environment is broken. Can I care about it?
+# 
 
 set -e
 
