@@ -107,6 +107,7 @@ case "$1" in
           quilt new $distribution > /dev/null && \
           for file in `find debian $common_exclude` 
           do
+	    echo $file >> "$backports_dir"/target_list
             quilt add -P "$distribution" $file 2>&1 >/dev/null
           done && \
         date +%s > $backports_dir/timestamp && \
@@ -123,7 +124,7 @@ case "$1" in
     update_files=`find debian -newer $backports_dir/timestamp $common_exclude`
     for update_file in $update_files
     do
-        if [ ! -f $backports_dir/$update_file ]; then
+        if [ -z grep $update_file $backports_dir/target_list ]; then
              quilt add -P "$distribution" $update_file
         fi
     done
