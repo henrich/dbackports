@@ -8,9 +8,7 @@
 # Depends: cowbuilder|pbuilder, devscripts, quilt
 # Recommends: sudo
 #
-# Todo: use git for temporary file handling
 # issue: can I remove root priv for cowbuilder/pbuilder via fakeroot?
-#        debian/backports/debian directory is ugly.
 # issue: sometimes cowbuilder environment is broken. Can I care about it?
 # 
 
@@ -18,7 +16,7 @@ set -e
 
 usage()
 {
-        echo  "Usage: dbackports [init|update|build|rollback]"
+        echo  "Usage: dbackports [init|update|build|discard]"
 }
 
 
@@ -82,6 +80,11 @@ else
     exit 1
 fi
 
+if [ -f $backports_dir/changelog ]; then
+	package_name=`dpkg-parsechangelog -c1 -l$backports_dir/changelog |grep ^Source |cut -d' ' -f2`
+	package_version=`dpkg-parsechangelog -c1 -l$backports_dir/changelog |grep ^Version |cut -d' ' -f2`
+fi
+
 case "$1" in
   init)
     if [ $buildtool = cowbuilder -a ! -d "$basepath" ]; then
@@ -94,14 +97,10 @@ case "$1" in
 
 # dch only support Debian stable backports?
     if [ ! -d "$backports_dir" ]; then
-        mkdir $backports_dir && \
-        find debian $common_exclude | cpio -pdV --quiet $backports_dir && 
-            echo debian/changelog | cpio -pdV --quiet $backports_dir &&\
-            mv $backports_dir/debian/changelog $backports_dir/changelog && \
-            dch --bpo --changelog $backports_dir/changelog \
-              -m "For detail of changes, see $backports_dir/$distribution"
+        mkdir $backports_dir && cp debian/changelog $backports_dir && \
+            dch --bpo -m "For detail of changes, see $backports_dir/$distribution"
         if [ -d .pc ]; then
-            mv .pc $backports_dir/orig.pc
+            rm -rf .pc
         fi
           quilt new $distribution > /dev/null && \
           for file in `find debian $common_exclude` 
@@ -128,39 +127,30 @@ case "$1" in
     done
     quilt refresh 2>&1 >/dev/null 
 
-    get_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2`
-    (echo "$get_version" | grep "bpo" &&  \
-      dch -i --changelog $backports_dir/changelog  -m "update backports.") || \
-      dch -e --changelog $backports_dir/changelog -D "$distribution"-backports \
+    (echo "$package_version" | grep "bpo" &&  \
+      dch -i -m "update backports.") || \
+      dch -e -D "$distribution"-backports \
         -m "For detail of changes, see debian/backports/$distribution"
 
-    cp -ap "debian/changelog" "debian/changelog_original" && \
-    cp -ap "$backports_dir/changelog" "debian/changelog" && \
     dpkg-buildpackage -S -us -uc > /dev/null
 
     echo " "
     echo "Now here's a backports patch in $backports_dir/$distribution and its source."
-    echo "Ready to build (or "dbackports rollback")."
+    echo "Ready to builds."
     echo " "
   ;;
 
-  rollback)
-    if [ -f debian/changelog_original ]; then
-        cp -ap debian/changelog_original debian/changelog && rm debian/changelog_original
-    fi
-
-    if [ -d "$backports_dir/orig.pc" ]; then
-        rm -rf .pc && \
-        cp -arp $backports_dir/orig.pc .pc && rm -r "$backports_dir/orig.pc"
-    fi
-
-    if [ -d $backports_dir ]; then
-        rm -rf $backports_dir
+  discard)
+    if [ ! -z $2 ]; then
+	rm -rf debian && tar xf $2
+    elif [ -f ../"$package_name"_"$package_version".debian.tar.[gz|bz2|xz] ]; then
+	rm -rf debian && tar xf ../"$package_name"-"$package_version".debian.tar.[gz|bz2|xz]
+    else
+	    echo "please specify debian.tar.[gz|bz2|xz] file, cannot rollback to before modifying source."
     fi
   ;;
 
   build)
-    package_name=`dpkg-parsechangelog -l$backports_dir/changelog|grep ^Source |cut -d' ' -f2`
     epoch_bpo_version=`dpkg-parsechangelog -c1 | grep ^Version |cut -d' ' -f2 | grep bpo`
     bpo_version="${epoch_bpo_version#*:}"
 
