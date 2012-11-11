@@ -124,7 +124,7 @@ case "$1" in
     update_files=`find debian -newer $backports_dir/timestamp $common_exclude`
     for update_file in $update_files
     do
-        if [ -z grep $update_file $backports_dir/target_list ]; then
+        if [ -z `grep $update_file $backports_dir/target_list` ]; then
              quilt add -P "$distribution" $update_file
         fi
     done
