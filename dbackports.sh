@@ -80,9 +80,11 @@ else
     exit 1
 fi
 
+# get original version if $backports_dir/changelog exists
 if [ -f $backports_dir/changelog ]; then
 	package_name=`dpkg-parsechangelog -c1 -l$backports_dir/changelog |grep ^Source |cut -d' ' -f2`
-	package_version=`dpkg-parsechangelog -c1 -l$backports_dir/changelog |grep ^Version |cut -d' ' -f2`
+	epoch_package_version=`dpkg-parsechangelog -c1 -l$backports_dir/changelog |grep ^Version |cut -d' ' -f2`
+        package_version="${epoch_package_version#*:}"
 fi
 
 case "$1" in
@@ -143,10 +145,11 @@ case "$1" in
   discard)
     if [ ! -z $2 ]; then
 	rm -rf debian && tar xf $2
-    elif [ -f ../"$package_name"_"$package_version".debian.tar.[gz|bz2|xz] ]; then
-	rm -rf debian && tar xf ../"$package_name"-"$package_version".debian.tar.[gz|bz2|xz]
+    elif [ -f ../"$package_name"_"$package_version".debian.tar.* ]; then
+	rm -rf debian && tar xf ../"$package_name"-"$package_version".debian.tar.*
     else
-	    echo "please specify debian.tar.[gz|bz2|xz] file, cannot rollback to before modifying source."
+	    echo "Please specify debian.tar.[gz|bz2|xz] file, \
+		    cannot rollback to before modifying source."
     fi
   ;;
 
