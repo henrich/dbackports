@@ -10,6 +10,7 @@
 #
 # issue: can I remove root priv for cowbuilder/pbuilder via fakeroot?
 # issue: sometimes cowbuilder environment is broken. Can I care about it?
+# issue: automatic debhelper compatible version change
 # 
 
 set -e
